@@ -25,42 +25,49 @@ func resourceFilter() *schema.Resource {
 							Type:        schema.TypeBool,
 							Optional:    true,
 							Computed:    true,
+							ForceNew:    true,
 							Description: "Whether the response should exclude chats",
 						},
 						"from": {
 							Type:        schema.TypeString,
 							Optional:    true,
 							Computed:    true,
+							ForceNew:    true,
 							Description: "The sender's display name or email address",
 						},
 						"has_attachment": {
 							Type:        schema.TypeBool,
 							Optional:    true,
 							Computed:    true,
+							ForceNew:    true,
 							Description: "Whether the message has any attachment",
 						},
 						"query": {
 							Type:        schema.TypeString,
 							Optional:    true,
 							Computed:    true,
+							ForceNew:    true,
 							Description: "Only return messages matching the specified query. Supports the same query format as the Gmail search box.",
 						},
 						"negated_query": {
 							Type:        schema.TypeString,
 							Optional:    true,
 							Computed:    true,
+							ForceNew:    true,
 							Description: "Only return messages not matching the specified query. Supports the same query format as the Gmail search box.",
 						},
 						"size": {
 							Type:        schema.TypeInt,
 							Optional:    true,
 							Computed:    true,
+							ForceNew:    true,
 							Description: "The size of the entire RFC822 message in bytes, including all headers and attachments",
 						},
 						"size_comparison": {
 							Type:        schema.TypeString,
 							Optional:    true,
 							Computed:    true,
+							ForceNew:    true,
 							Description: "How the message size in bytes should be in relation to the size field",
 							ValidateFunc: validation.StringInSlice([]string{
 								"larger",
@@ -72,12 +79,14 @@ func resourceFilter() *schema.Resource {
 							Type:        schema.TypeString,
 							Optional:    true,
 							Computed:    true,
+							ForceNew:    true,
 							Description: "Case-insensitive phrase found in the message's subject. Trailing and leading whitespace are be trimmed and adjacent spaces are collapsed.",
 						},
 						"to": {
 							Type:        schema.TypeString,
 							Optional:    true,
 							Computed:    true,
+							ForceNew:    true,
 							Description: `The recipient's display name or email address. Includes recipients in the "to", "cc", and "bcc" header fields. You can use simply the local part of the email address. For example, "example" and "example@" both match "example@gmail.com". This field is case-insensitive.`,
 						},
 					},
@@ -94,6 +103,7 @@ func resourceFilter() *schema.Resource {
 						"add_label_ids": {
 							Type:        schema.TypeSet,
 							Optional:    true,
+							ForceNew:    true,
 							Description: "List of labels to add to the message",
 							Elem: &schema.Schema{
 								Type: schema.TypeString,
@@ -102,6 +112,7 @@ func resourceFilter() *schema.Resource {
 						"remove_label_ids": {
 							Type:        schema.TypeString,
 							Optional:    true,
+							ForceNew:    true,
 							Description: "List of labels to remove from the message",
 							Elem: &schema.Schema{
 								Type: schema.TypeString,
@@ -110,6 +121,7 @@ func resourceFilter() *schema.Resource {
 						"forward": {
 							Type:        schema.TypeString,
 							Optional:    true,
+							ForceNew:    true,
 							Description: "Email address that the message should be forwarded to",
 						},
 					},
