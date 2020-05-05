@@ -12,6 +12,10 @@ func resourceFilter() *schema.Resource {
 	return &schema.Resource{
 		Create: resourceFilterCreate,
 		Read:   resourceFilterRead,
+		Delete: resourceFilterDelete,
+		Importer: &schema.ResourceImporter{
+			State: schema.ImportStatePassthrough,
+		},
 		Schema: map[string]*schema.Schema{
 			"criteria": {
 				Type:        schema.TypeList,
@@ -184,6 +188,16 @@ func resourceFilterRead(d *schema.ResourceData, m interface{}) error {
 	d.Set("action.0.add_label_ids", filter.Action.AddLabelIds)
 	d.Set("action.0.remove_label_ids", filter.Action.RemoveLabelIds)
 	d.Set("forward", filter.Action.Forward)
+
+	return nil
+}
+
+func resourceFilterDelete(d *schema.ResourceData, m interface{}) error {
+	client := m.(*gmail.Service)
+
+	if err := client.Users.Settings.Filters.Delete("me", d.Id()).Do(); err != nil {
+		return fmt.Errorf("error deleting filter: %v", err)
+	}
 
 	return nil
 }
