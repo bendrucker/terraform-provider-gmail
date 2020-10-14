@@ -1,18 +1,19 @@
 package gmail
 
 import (
-	"fmt"
+	"context"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/validation"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"google.golang.org/api/gmail/v1"
 )
 
 func resourceFilter() *schema.Resource {
 	return &schema.Resource{
-		Create: resourceFilterCreate,
-		Read:   resourceFilterRead,
-		Delete: resourceFilterDelete,
+		CreateContext: resourceFilterCreate,
+		ReadContext:   resourceFilterRead,
+		DeleteContext: resourceFilterDelete,
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
 		},
@@ -23,6 +24,7 @@ func resourceFilter() *schema.Resource {
 				MaxItems:    1,
 				Required:    true,
 				Description: `Matching criteria for the filter`,
+				ForceNew:    true,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"exclude_chats": {
@@ -101,7 +103,8 @@ func resourceFilter() *schema.Resource {
 				MinItems:    1,
 				MaxItems:    1,
 				Required:    true,
-				Description: `Matching criteria for the filter`,
+				Description: `Action that the filter performs`,
+				ForceNew:    true,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"add_label_ids": {
@@ -114,7 +117,7 @@ func resourceFilter() *schema.Resource {
 							},
 						},
 						"remove_label_ids": {
-							Type:        schema.TypeString,
+							Type:        schema.TypeSet,
 							Optional:    true,
 							ForceNew:    true,
 							Description: "List of labels to remove from the message",
@@ -135,8 +138,11 @@ func resourceFilter() *schema.Resource {
 	}
 }
 
-func resourceFilterCreate(d *schema.ResourceData, m interface{}) error {
-	client := m.(*gmail.Service)
+func resourceFilterCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
+	client, err := gmail.NewService(ctx)
+	if err != nil {
+		return diag.FromErr(err)
+	}
 
 	filter := &gmail.Filter{
 		Criteria: &gmail.FilterCriteria{},
@@ -152,27 +158,30 @@ func resourceFilterCreate(d *schema.ResourceData, m interface{}) error {
 	}
 	filter.Criteria.Query = d.Get("criteria.0.query").(string)
 	filter.Criteria.NegatedQuery = d.Get("criteria.0.negated_query").(string)
-	filter.Criteria.Size = d.Get("criteria.0.size").(int64)
+	filter.Criteria.Size = int64(d.Get("criteria.0.size").(int))
 	filter.Criteria.SizeComparison = d.Get("criteria.0.size_comparison").(string)
 	filter.Criteria.Subject = d.Get("criteria.0.subject").(string)
 	filter.Criteria.To = d.Get("criteria.0.to").(string)
 
-	filter, err := client.Users.Settings.Filters.Create("me", filter).Do()
+	filter, err = client.Users.Settings.Filters.Create("me", filter).Do()
 	if err != nil {
-		return fmt.Errorf("error creating filter: %v", err)
+		return diag.Errorf("error creating filter: %v", err)
 	}
 
 	d.SetId(filter.Id)
 
-	return resourceFilterRead(d, m)
+	return resourceFilterRead(ctx, d, m)
 }
 
-func resourceFilterRead(d *schema.ResourceData, m interface{}) error {
-	client := m.(*gmail.Service)
+func resourceFilterRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
+	client, err := gmail.NewService(ctx)
+	if err != nil {
+		return diag.FromErr(err)
+	}
 
 	filter, err := client.Users.Settings.Filters.Get("me", d.Id()).Do()
 	if err != nil {
-		return fmt.Errorf("error reading filter: %v", err)
+		return diag.Errorf("error reading filter: %v", err)
 	}
 
 	d.Set("criteria.0.exclude_chats", filter.Criteria.ExcludeChats)
@@ -192,11 +201,14 @@ func resourceFilterRead(d *schema.ResourceData, m interface{}) error {
 	return nil
 }
 
-func resourceFilterDelete(d *schema.ResourceData, m interface{}) error {
-	client := m.(*gmail.Service)
+func resourceFilterDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
+	client, err := gmail.NewService(ctx)
+	if err != nil {
+		return diag.FromErr(err)
+	}
 
-	if err := client.Users.Settings.Filters.Delete("me", d.Id()).Do(); err != nil {
-		return fmt.Errorf("error deleting filter: %v", err)
+	if err = client.Users.Settings.Filters.Delete("me", d.Id()).Do(); err != nil {
+		return diag.Errorf("error deleting filter: %v", err)
 	}
 
 	return nil
