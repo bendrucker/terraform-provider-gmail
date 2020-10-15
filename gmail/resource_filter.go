@@ -139,7 +139,7 @@ func resourceFilter() *schema.Resource {
 }
 
 func resourceFilterCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	client, err := gmail.NewService(ctx)
+	client, err := m.(*Config).NewService(ctx)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -163,6 +163,30 @@ func resourceFilterCreate(ctx context.Context, d *schema.ResourceData, m interfa
 	filter.Criteria.Subject = d.Get("criteria.0.subject").(string)
 	filter.Criteria.To = d.Get("criteria.0.to").(string)
 
+	if v, ok := d.GetOk("action.0.add_label_ids"); ok {
+		labels := v.(*schema.Set).List()
+		ids := make([]string, len(labels))
+
+		for i, label := range labels {
+			ids[i] = label.(string)
+		}
+
+		filter.Action.AddLabelIds = ids
+	}
+
+	if v, ok := d.GetOk("action.0.remove_label_ids"); ok {
+		labels := v.(*schema.Set).List()
+		ids := make([]string, len(labels))
+
+		for i, label := range labels {
+			ids[i] = label.(string)
+		}
+
+		filter.Action.RemoveLabelIds = ids
+	}
+
+	filter.Action.Forward = d.Get("action.0.forward").(string)
+
 	filter, err = client.Users.Settings.Filters.Create("me", filter).Do()
 	if err != nil {
 		return diag.Errorf("error creating filter: %v", err)
@@ -174,7 +198,7 @@ func resourceFilterCreate(ctx context.Context, d *schema.ResourceData, m interfa
 }
 
 func resourceFilterRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	client, err := gmail.NewService(ctx)
+	client, err := m.(*Config).NewService(ctx)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -184,25 +208,14 @@ func resourceFilterRead(ctx context.Context, d *schema.ResourceData, m interface
 		return diag.Errorf("error reading filter: %v", err)
 	}
 
-	d.Set("criteria.0.exclude_chats", filter.Criteria.ExcludeChats)
-	d.Set("criteria.0.from", filter.Criteria.From)
-	d.Set("criteria.0.has_attachment", filter.Criteria.HasAttachment)
-	d.Set("criteria.0.query", filter.Criteria.Query)
-	d.Set("criteria.0.negated_query", filter.Criteria.NegatedQuery)
-	d.Set("criteria.0.size", filter.Criteria.Size)
-	d.Set("criteria.0.size_comparison", filter.Criteria.SizeComparison)
-	d.Set("criteria.0.subject", filter.Criteria.Subject)
-	d.Set("criteria.0.to", filter.Criteria.To)
-
-	d.Set("action.0.add_label_ids", filter.Action.AddLabelIds)
-	d.Set("action.0.remove_label_ids", filter.Action.RemoveLabelIds)
-	d.Set("forward", filter.Action.Forward)
+	d.Set("criteria", flattenCriteria(filter.Criteria))
+	d.Set("action", flattenAction(filter.Action))
 
 	return nil
 }
 
 func resourceFilterDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	client, err := gmail.NewService(ctx)
+	client, err := m.(*Config).NewService(ctx)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -212,4 +225,30 @@ func resourceFilterDelete(ctx context.Context, d *schema.ResourceData, m interfa
 	}
 
 	return nil
+}
+
+func flattenCriteria(criteria *gmail.FilterCriteria) []interface{} {
+	att := make(map[string]interface{})
+
+	att["exclude_chats"] = criteria.ExcludeChats
+	att["from"] = criteria.From
+	att["has_attachment"] = criteria.HasAttachment
+	att["query"] = criteria.Query
+	att["negated_query"] = criteria.NegatedQuery
+	att["size"] = criteria.Size
+	att["size_comparison"] = criteria.SizeComparison
+	att["subject"] = criteria.Subject
+	att["to"] = criteria.To
+
+	return []interface{}{att}
+}
+
+func flattenAction(action *gmail.FilterAction) []interface{} {
+	att := make(map[string]interface{})
+
+	att["add_label_ids"] = action.AddLabelIds
+	att["remove_label_ids"] = action.RemoveLabelIds
+	att["forward"] = action.Forward
+
+	return []interface{}{att}
 }
